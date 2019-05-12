@@ -79,9 +79,7 @@ Resources:
     Type: 'AWS::CodePipeline::Pipeline'
     Properties:
       Name: github-events-pipeline
-      RoleArn: !GetAtt 
-        - CodePipelineServiceRole
-        - Arn
+      RoleArn: !GetAtt CodePipelineServiceRolei.Arn
       Stages:
         - Name: Source
           Actions:
@@ -121,7 +119,7 @@ Resources:
     Properties:
       Name: myProjectName
       Description: A description about my project
-      ServiceRole: !GetAtt ServiceRole.Arn
+      ServiceRole: !GetAtt rCodeBuildServiceRole.Arn
       Artifacts:
         Type: no_artifacts
       Environment:
@@ -136,6 +134,50 @@ Resources:
           Value: Value1
         - Key: Key2
           Value: Value2        
+  rCodeBuildServiceRole:        
+    Type: 'AWS::IAM::Role'
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - codebuild.amazonaws.com
+            Action: 'sts:AssumeRole'
+      Path: /
+      Policies:
+        - PolicyName: AWS-CodeBuild-Service-3
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+             - Sid: CloudWatchLogsPolicy
+              Effect: Allow
+              Action:
+              - logs:CreateLogGroup
+              - logs:CreateLogStream
+              - logs:PutLogEvents
+              Resource:
+              - "*"
+            - Sid: CodeCommitPolicy
+              Effect: Allow
+              Action:
+              - codecommit:GitPull
+              Resource:
+              - "*"
+            - Sid: S3GetObjectPolicy
+              Effect: Allow
+              Action:
+              - s3:GetObject
+              - s3:GetObjectVersion
+              Resource:
+              - "*"
+            - Sid: S3PutObjectPolicy
+              Effect: Allow
+              Action:
+              - s3:PutObject
+              Resource:
+              - "*"
   CodePipelineServiceRole:
     Type: 'AWS::IAM::Role'
     Properties:
