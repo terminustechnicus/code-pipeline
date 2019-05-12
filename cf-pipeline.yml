@@ -107,9 +107,9 @@ Resources:
                 Category: Build
                 Owner: AWS
                 Version: 1
-                Provider: !Ref CodeBuildProject
+                Provider: CodeBuild
               Configuration:
-                ProjectName: !Ref ApplicationName
+                ProjectName: !Ref CodeBuildProject
               RunOrder: 1
       ArtifactStore:
         Type: S3
@@ -121,7 +121,7 @@ Resources:
       Description: A description about my project
       ServiceRole: !GetAtt rCodeBuildServiceRole.Arn
       Artifacts:
-        Type: no_artifacts
+        Type: CODEPIPELINE 
       Environment:
         Type: LINUX_CONTAINER
         ComputeType: BUILD_GENERAL1_SMALL
