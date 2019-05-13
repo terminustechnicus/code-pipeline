@@ -24,6 +24,11 @@ Parameters:
     Type: String
     Default: DemoFleet
 Resources:
+    # S3 Buckets that are website enabled
+    # Route53 Zones and records
+    # Code builds and source triggers for stages
+    # Cloud front / https redirect
+    # SSL Certificate
   CodePipelineArtifactStoreBucket:
     Type: 'AWS::S3::Bucket'
   CodePipelineArtifactStoreBucketPolicy:
@@ -175,7 +180,7 @@ Resources:
             - Sid: S3PutObjectPolicy
               Effect: Allow
               Action:
-              - s3:PutObject
+              - s3:*
               Resource:
               - "*"
   CodePipelineServiceRole:
