@@ -12,23 +12,96 @@ Parameters:
   GitHubSecret:
     Type: String
     NoEcho: true
-  GitHubOAuthToken:
+  ps3wwwName:
+    Description: Name of s3 bucket that hosts static
     Type: String
-    NoEcho: true
-  ApplicationName:
-    Description: CodeDeploy application name
+    Default: dev-static-blog-0346
+  pRootDomainName:
+    Description: Primary domain name
     Type: String
-    Default: DemoApplication
-  BetaFleet:
-    Description: Fleet configured in CodeDeploy
-    Type: String
-    Default: DemoFleet
+    Default: '*.dev.techminus.net'
+  pAdditionalDomainName:
+    Description: Alternative domain name
+    Type: CommaDelimitedList
+    Default: '*.dev.terminustechnicus.net'
+  pFQDNs:
+    Description: Fully Qualified Domain Names
+    Type: CommaDelimitedList
+    Default: blog.dev.terminustechnicus.net, blog.dev.techminus.net
 Resources:
-    # S3 Buckets that are website enabled
-    # Route53 Zones and records
-    # Code builds and source triggers for stages
-    # Cloud front / https redirect
-    # SSL Certificate
+
+# S3 Buckets that are website enabled
+  rs3WebsiteBucket:
+      Type: AWS::S3::Bucket
+      Properties:
+          BucketName: !Ref ps3wwwName
+          AccessControl: PublicRead
+          WebsiteConfiguration:
+              IndexDocument: index.html
+              ErrorDocument: error.html
+  rs3WebsiteBucketPolicy:
+      Type: AWS::S3::BucketPolicy
+      Properties:
+          PolicyDocument:
+              Id: wwwBucketPolicy
+              Version: 2012-10-17
+              Statement:
+                  - Sid: PublicReadForWwwBucket
+                    Effect: Allow
+                    Principal: '*'
+                    Action: 's3:GetObject'
+                    Resource: !Sub arn:${AWS::Partition}:s3:::${rs3WebsiteBucket}/*
+          Bucket: !Ref rs3WebsiteBucket
+          
+# Route53 Zones and records
+# This already exists in another account
+    
+
+# Cloud front / https redirect
+  rCDN:
+    DependsOn: rCDNOrigin
+    Type: AWS::CloudFront::Distribution
+    Properties:
+      DistributionConfig:
+          Enabled: true
+          Aliases: !Ref pFQDNs
+          ViewerCertificate: 
+            AcmCertificateArn: !Ref rSslCertificate
+            MinimumProtocolVersion: TLSv1.1_2016
+            SslSupportMethod: sni-only
+          DefaultRootObject: index.html
+          HttpVersion: http2
+          IPV6Enabled: true
+          PriceClass: PriceClass_All
+          Origins:
+          - DomainName: !GetAtt rs3WebsiteBucket.DomainName
+            Id: myS3Origin
+            S3OriginConfig: 
+              OriginAccessIdentity: !Sub origin-access-identity/cloudfront/${rCDNOrigin}
+          DefaultCacheBehavior:
+            ForwardedValues:
+              QueryString: false
+              Cookies:
+                Forward: none
+            TargetOriginId: myS3Origin
+            ViewerProtocolPolicy: redirect-to-https
+
+  rCDNOrigin:
+    Type: AWS::CloudFront::CloudFrontOriginAccessIdentity
+    Properties:
+        CloudFrontOriginAccessIdentityConfig:
+            Comment: 'Access Identity for S3Origin'
+
+# SSL Certificate
+  rSslCertificate:  
+    Type: AWS::CertificateManager::Certificate
+    Properties: 
+      DomainName: !Ref pRootDomainName 
+      SubjectAlternativeNames: !Ref pAdditionalDomainName
+      ValidationMethod: DNS
+  
+# Code builds and source triggers for stages
+
   CodePipelineArtifactStoreBucket:
     Type: 'AWS::S3::Bucket'
   CodePipelineArtifactStoreBucketPolicy:
@@ -100,7 +173,7 @@ Resources:
                 Owner: !Ref GitHubOwner
                 Repo: !Ref RepositoryName
                 Branch: !Ref BranchName
-                OAuthToken: !Ref GitHubOAuthToken
+                OAuthToken: !Ref GitHubSecret 
                 PollForSourceChanges: false
               RunOrder: 1
         - Name: Build 
